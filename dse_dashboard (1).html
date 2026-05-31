@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSE Comprehensive Analysis Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --surface3: #1f242f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text2: #8a8f9e;
+    --text3: #555b6b;
+    --accent: #4fffb0;
+    --accent2: #00c8ff;
+    --accent3: #ff6b6b;
+    --accent4: #ffc94a;
+    --accent5: #b388ff;
+    --buy: #4fffb0;
+    --watch: #ffc94a;
+    --avoid: #ff6b6b;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --r: 10px;
+    --r2: 6px;
+  }
+
+  html { font-size: 14px; scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── LAYOUT ── */
+  .page { max-width: 1320px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── HEADER ── */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 32px 0 28px;
+    margin-bottom: 40px;
+    position: relative;
+  }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .header-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(79,255,176,0.08);
+    border: 1px solid rgba(79,255,176,0.2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+  .header h1 {
+    font-family: var(--font-head);
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: #fff;
+  }
+  .header h1 span { color: var(--accent); }
+  .header-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 8px;
+    font-family: var(--font-mono);
+  }
+  .header-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .meta-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .meta-pill strong { color: var(--text); font-weight: 500; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    margin-top: 44px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+  .card-title {
+    font-family: var(--font-head);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+  }
+
+  /* ── GRID LAYOUTS ── */
+  .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .g2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .g2-3 { display: grid; grid-template-columns: 2fr 3fr; gap: 14px; }
+  .g3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
+  .g1 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+  /* ── KPI CARDS ── */
+  .kpi {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px 20px;
+    position: relative;
+  }
+  .kpi-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+  }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+  .kpi-accent { color: var(--accent); }
+  .kpi-accent2 { color: var(--accent2); }
+  .kpi-accent4 { color: var(--accent4); }
+  .kpi-accent5 { color: var(--accent5); }
+
+  /* ── SIGNAL BADGES ── */
+  .badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .badge-buy   { background: rgba(79,255,176,0.12); color: var(--buy); border: 1px solid rgba(79,255,176,0.25); }
+  .badge-watch { background: rgba(255,201,74,0.12); color: var(--watch); border: 1px solid rgba(255,201,74,0.25); }
+  .badge-avoid { background: rgba(255,107,107,0.12); color: var(--avoid); border: 1px solid rgba(255,107,107,0.25); }
+
+  /* ── ROTATION SIGNAL TABLE ── */
+  .rotation-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .rotation-row:last-child { border-bottom: none; }
+  .rot-sector {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 100px;
+    color: var(--text);
+  }
+  .rot-bar-wrap { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .rot-bar { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+  .rot-score {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text2);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* ── SHARPE TABLE ── */
+  .stk-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .stk-row:last-child { border-bottom: none; }
+  .stk-rank {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text3);
+    min-width: 18px;
+  }
+  .stk-name {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 100px;
+    color: var(--text);
+  }
+  .stk-sector {
+    font-size: 10px;
+    color: var(--text3);
+    flex: 1;
+  }
+  .stk-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 50px;
+    text-align: right;
+  }
+  .stk-val.pos { color: var(--buy); }
+  .stk-val.neg { color: var(--avoid); }
+
+  /* ── MOMENTUM TABLE ── */
+  .mom-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--r2);
+    overflow: hidden;
+  }
+  .mom-col { background: var(--surface2); padding: 14px 14px; }
+  .mom-col-head {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .mom-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+  .mom-ticker { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--text); }
+  .mom-ret { font-family: var(--font-mono); font-size: 11px; color: var(--buy); }
+
+  /* ── VOLUME SURGE ── */
+  .surge-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .surge-item:last-child { border-bottom: none; }
+  .surge-ticker { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--text); min-width: 90px; }
+  .surge-bar-wrap { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .surge-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+  .surge-val {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent2);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* ── ANNUAL RETURNS HEATMAP ── */
+  .heat-wrap { overflow-x: auto; }
+  .heat-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 10.5px; }
+  .heat-table th {
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    padding: 6px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .heat-table td {
+    padding: 5px 6px;
+    text-align: center;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 400;
+    transition: opacity 0.2s;
+    cursor: default;
+    white-space: nowrap;
+  }
+  .heat-table td.year-col {
+    color: var(--text2);
+    font-size: 10px;
+    text-align: left;
+    padding-left: 0;
+    font-weight: 500;
+  }
+  .heat-table tr:hover td:not(.year-col) { opacity: 0.7; }
+
+  /* ── BETA TABLE ── */
+  .beta-section { margin-bottom: 16px; }
+  .beta-label { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.08em; }
+  .beta-item { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .beta-item:last-child { border-bottom: none; }
+  .beta-name { font-family: var(--font-mono); font-size: 11px; color: var(--text); min-width: 90px; font-weight: 500; }
+  .beta-bar-wrap { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .beta-bar-h { height: 100%; border-radius: 2px; background: var(--accent3); }
+  .beta-bar-l { height: 100%; border-radius: 2px; background: var(--accent2); }
+  .beta-val { font-family: var(--font-mono); font-size: 11px; min-width: 36px; text-align: right; }
+  .beta-val.high { color: var(--accent3); }
+  .beta-val.low { color: var(--accent2); }
+
+  /* ── SECTOR VOL BARS ── */
+  .sector-vol-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .sector-vol-item:last-child { border-bottom: none; }
+  .sv-name { font-family: var(--font-mono); font-size: 11px; color: var(--text); min-width: 110px; font-weight: 500; }
+  .sv-bar-wrap { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .sv-bar { height: 100%; border-radius: 2px; }
+  .sv-val { font-family: var(--font-mono); font-size: 11px; color: var(--text2); min-width: 48px; text-align: right; }
+
+  /* ── PHASE BOX ── */
+  .phase-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px 18px;
+    margin-top: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .phase-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent4);
+    margin-top: 3px;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(255,201,74,0.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(255,201,74,0.4); }
+    50% { box-shadow: 0 0 14px rgba(255,201,74,0.8); }
+  }
+  .phase-content {}
+  .phase-title { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--accent4); margin-bottom: 4px; }
+  .phase-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  /* ── CORR PAIRS ── */
+  .corr-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 10.5px; }
+  .corr-item:last-child { border-bottom: none; }
+  .corr-pair { color: var(--text); flex: 1; }
+  .corr-pair span { color: var(--text3); }
+  .corr-val { min-width: 40px; text-align: right; }
+  .corr-val.hi { color: var(--avoid); }
+  .corr-val.lo { color: var(--buy); }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .footer-l { font-family: var(--font-mono); font-size: 10px; color: var(--text3); }
+  .footer-l strong { color: var(--text2); }
+  .disclaimer { font-size: 10px; color: var(--text3); font-family: var(--font-mono); max-width: 560px; line-height: 1.6; }
+
+  /* ── NAV TABS ── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 28px; background: var(--surface2); padding: 4px; border-radius: var(--r); border: 1px solid var(--border); width: fit-content; }
+  .tab {
+    font-family: var(--font-head);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text2); background: var(--surface3); }
+  .tab.active { color: #fff; background: var(--surface3); border: 1px solid var(--border2); }
+
+  /* ── SECTION PANELS ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── OVERWEIGHT/UNDERWEIGHT ── */
+  .ow-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ow-item:last-child { border-bottom: none; }
+  .ow-sector { font-family: var(--font-head); font-size: 13px; font-weight: 600; min-width: 110px; }
+  .ow-sector.buy { color: var(--buy); }
+  .ow-sector.avoid { color: var(--avoid); }
+  .ow-ret { font-family: var(--font-mono); font-size: 12px; color: var(--text2); }
+
+  /* ── CHART WRAPPER ── */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    .g4 { grid-template-columns: repeat(2, 1fr); }
+    .g3 { grid-template-columns: repeat(2, 1fr); }
+    .g2-3, .g3-2 { grid-template-columns: 1fr; }
+    .header h1 { font-size: 1.8rem; }
+    .mom-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .g4 { grid-template-columns: 1fr; }
+    .g2 { grid-template-columns: 1fr; }
+    .mom-grid { grid-template-columns: 1fr; }
+    .tabs { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ════════════════════════════════════ HEADER ════════════════════════════════════ -->
+  <header class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-badge">Dhaka Stock Exchange · Quantitative Analysis</div>
+        <h1>DSE <span>Market</span> Intelligence</h1>
+        <p class="header-sub">120 stocks · 10 sectors · 3,115 trading days · 2013-01-01 → 2026-01-22</p>
+      </div>
+      <div class="header-meta">
+        <div class="meta-pill">Dataset <strong>334,520</strong> rows</div>
+        <div class="meta-pill">Companies <strong>120</strong></div>
+        <div class="meta-pill">Sectors <strong>10</strong></div>
+        <div class="meta-pill">Last update <strong>Jan 22, 2026</strong></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════ TABS ════════════════════════════════════ -->
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-panel="overview">Overview</button>
+    <button class="tab" data-panel="sharpe">Sharpe & Risk</button>
+    <button class="tab" data-panel="rotation">Sector Rotation</button>
+    <button class="tab" data-panel="momentum">Momentum</button>
+    <button class="tab" data-panel="heatmap">Return Heatmap</button>
+  </div>
+
+  <!-- ═══════════════════════════════ PANEL: OVERVIEW ═══════════════════════════════ -->
+  <div class="panel active" id="panel-overview">
+
+    <div class="g4">
+      <div class="kpi">
+        <div class="kpi-label">Best Sharpe</div>
+        <div class="kpi-value kpi-accent">4.80</div>
+        <div class="kpi-sub">CONTININS (Insurance)</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Top 1Y Return</div>
+        <div class="kpi-value kpi-accent">+120%</div>
+        <div class="kpi-sub">APEXSPINN</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Market Phase</div>
+        <div class="kpi-value kpi-accent4" style="font-size:1.4rem;">Recovery</div>
+        <div class="kpi-sub">Bank & Pharma building</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Rotation Rate</div>
+        <div class="kpi-value kpi-accent2">85%</div>
+        <div class="kpi-sub">144 / 169 periods changed</div>
+      </div>
+    </div>
+
+    <!-- Sector Dist + Signal -->
+    <div class="section-title">Sector Snapshot</div>
+    <div class="g2-3">
+      <!-- Sector distribution chart -->
+      <div class="card">
+        <div class="card-title">Sector Distribution</div>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="sectorDistChart" role="img" aria-label="Doughnut chart of sector distribution by number of companies"></canvas>
+        </div>
+      </div>
+
+      <!-- Composite Rotation Signal -->
+      <div class="card">
+        <div class="card-title">Composite Rotation Signal — Current</div>
+        <div id="rotSignal"></div>
+      </div>
+    </div>
+
+    <!-- Volume Surges + Beta -->
+    <div class="section-title">Money Flow & Risk Profile</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Volume Surge — Top 15 (Recent / Hist. Avg)</div>
+        <div id="surgeBars"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Beta Distribution — vs Equal-Weighted Market</div>
+        <div id="betaBars"></div>
+      </div>
+    </div>
+
+    <!-- Sector Volatility + Correlation Pairs -->
+    <div class="section-title">Volatility & Correlation</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Sector Annualised Volatility (%)</div>
+        <div id="sectorVolBars"></div>
+      </div>
+      <div class="card" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div>
+          <div class="card-title">High Correlation ⚠</div>
+          <div id="corrHigh"></div>
+        </div>
+        <div>
+          <div class="card-title">Low Correlation ✓</div>
+          <div id="corrLow"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Phase -->
+    <div class="phase-box">
+      <div class="phase-dot"></div>
+      <div class="phase-content">
+        <div class="phase-title">Current DSE Cycle → Recovery Phase</div>
+        <div class="phase-text">
+          <strong>Bull phase</strong> → Engineering / IT (high beta, growth) &nbsp;|&nbsp;
+          <strong>Bear phase</strong> → Pharma / Insurance (defensive) &nbsp;|&nbsp;
+          <strong>Recovery</strong> → Textile / Bank (cyclical rebound) &nbsp;|&nbsp;
+          <strong>Late-recovery</strong> → Pharma building momentum again.<br/>
+          <strong>Action:</strong> Overweight BANK & INSURANCE. Watch PHARMA_CHEM. Reduce TEXTILE & ENGINEERING exposure.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end overview -->
+
+
+  <!-- ═══════════════════════════════ PANEL: SHARPE ═══════════════════════════════ -->
+  <div class="panel" id="panel-sharpe">
+
+    <div class="section-title">Risk-Adjusted Rankings</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Top 10 — Best Sharpe Ratio</div>
+        <div id="topSharpe"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Bottom 10 — Wealth Destroying</div>
+        <div id="botSharpe"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Risk / Return Scatter</div>
+    <div class="card">
+      <div class="card-title">Annualised Return vs Volatility — Key Stocks</div>
+      <div class="chart-wrap" style="height:380px;">
+        <canvas id="riskReturnChart" role="img" aria-label="Scatter chart showing annualised return versus volatility for key stocks"></canvas>
+      </div>
+    </div>
+
+    <div class="section-title">Max Drawdown</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Most Resilient (Smallest Drawdown)</div>
+        <div id="drawdownLow"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Highest Risk (Largest Drawdown)</div>
+        <div id="drawdownHigh"></div>
+      </div>
+    </div>
+
+  </div><!-- end sharpe -->
+
+
+  <!-- ═══════════════════════════════ PANEL: ROTATION ═══════════════════════════════ -->
+  <div class="panel" id="panel-rotation">
+
+    <div class="section-title">Next-Period Signal</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">🟢 Overweight — Momentum + Volume Confirm</div>
+        <div class="ow-item">
+          <div class="ow-sector buy">INSURANCE</div>
+          <div class="ow-ret">Relative return <strong style="color:var(--buy)">+5.16%</strong></div>
+        </div>
+        <div class="ow-item">
+          <div class="ow-sector buy">BANK</div>
+          <div class="ow-ret">Relative return <strong style="color:var(--buy)">+3.14%</strong></div>
+        </div>
+        <div class="ow-item">
+          <div class="ow-sector buy">NBFI</div>
+          <div class="ow-ret">Relative return <strong style="color:var(--buy)">+3.00%</strong></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔴 Underweight — Momentum + Volume Confirm Outflow</div>
+        <div class="ow-item">
+          <div class="ow-sector avoid">FOOD_ALLIED</div>
+          <div class="ow-ret">Relative return <strong style="color:var(--avoid)">-5.12%</strong></div>
+        </div>
+        <div class="ow-item">
+          <div class="ow-sector avoid">TEXTILE</div>
+          <div class="ow-ret">Relative return <strong style="color:var(--avoid)">-6.46%</strong></div>
+        </div>
+        <div class="ow-item">
+          <div class="ow-sector avoid">ENGINEERING</div>
+          <div class="ow-ret">Relative return <strong style="color:var(--avoid)">-6.53%</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Recent Rebalancing Signals</div>
+    <div class="g1">
+      <div class="card">
+        <div class="card-title">Last 5 Rebalancing Periods (4-week lookback / 4-week hold)</div>
+        <div id="rebalSignals"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Sector Leadership History</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Sector Leader Frequency (2013–2026)</div>
+        <div class="chart-wrap" style="height:240px;">
+          <canvas id="leaderFreqChart" role="img" aria-label="Bar chart showing which sectors led the market most frequently"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Volume-Weighted Smart Money Flow by Sector</div>
+        <div class="chart-wrap" style="height:240px;">
+          <canvas id="smartMoneyChart" role="img" aria-label="Bar chart showing cumulative volume-weighted return by sector"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end rotation -->
+
+
+  <!-- ═══════════════════════════════ PANEL: MOMENTUM ═══════════════════════════════ -->
+  <div class="panel" id="panel-momentum">
+
+    <div class="section-title">Momentum Leaderboard</div>
+    <div class="card">
+      <div class="card-title">Top 5 Performers by Time Horizon</div>
+      <div class="mom-grid" id="momGrid"></div>
+    </div>
+
+    <div class="section-title">1Y Return — Top Performers</div>
+    <div class="card">
+      <div class="card-title">1-Year Return Leaders</div>
+      <div class="chart-wrap" style="height:280px;">
+        <canvas id="oneYearChart" role="img" aria-label="Horizontal bar chart of 1 year return top 5 performers"></canvas>
+      </div>
+    </div>
+
+  </div><!-- end momentum -->
+
+
+  <!-- ═══════════════════════════════ PANEL: HEATMAP ═══════════════════════════════ -->
+  <div class="panel" id="panel-heatmap">
+
+    <div class="section-title">Annual Returns Heatmap (%) — The Rotation Map</div>
+    <div class="card">
+      <div class="card-title">Annual sector returns 2014–2026 — color encodes performance</div>
+      <div class="heat-wrap">
+        <table class="heat-table" id="heatTable"></table>
+      </div>
+    </div>
+
+    <div class="section-title">Sector Cumulative Return — 2013–2026</div>
+    <div class="card">
+      <div class="chart-wrap" style="height:320px;">
+        <canvas id="cumRetChart" role="img" aria-label="Line chart showing relative sector return performance from 2013 to 2026"></canvas>
+      </div>
+    </div>
+
+  </div><!-- end heatmap -->
+
+
+  <!-- ═════════════════════════════════ FOOTER ═════════════════════════════════ -->
+  <footer class="footer">
+    <div class="footer-l">DSE Market Intelligence · <strong>120 stocks</strong> · <strong>10 sectors</strong> · Data thru <strong>Jan 22, 2026</strong></div>
+    <div class="disclaimer">⚠ For informational purposes only. Past performance is not indicative of future results. This analysis does not constitute financial advice. Always conduct independent research before making investment decisions.</div>
+  </footer>
+
+</div><!-- end page -->
+
+<script>
+/* ═══════════════ DATA ═══════════════ */
+const sectors = ['BANK','CEMENT','ENGINEERING','FOOD_ALLIED','INSURANCE','NBFI','PHARMA_CHEM','POWER_ENERGY','TELCO_IT','TEXTILE'];
+const sectorCount = [28,6,9,11,17,9,16,3,8,13];
+
+const rotSignalData = [
+  { sector:'INSURANCE',   score:0.96, signal:'BUY' },
+  { sector:'BANK',        score:0.91, signal:'BUY' },
+  { sector:'NBFI',        score:0.66, signal:'BUY' },
+  { sector:'POWER_ENERGY',score:0.60, signal:'BUY' },
+  { sector:'PHARMA_CHEM', score:0.44, signal:'WATCH' },
+  { sector:'TELCO_IT',    score:0.34, signal:'AVOID' },
+  { sector:'ENGINEERING', score:0.29, signal:'AVOID' },
+  { sector:'CEMENT',      score:0.25, signal:'AVOID' },
+  { sector:'FOOD_ALLIED', score:0.12, signal:'AVOID' },
+  { sector:'TEXTILE',     score:0.05, signal:'AVOID' },
+];
+
+const topSharpeData = [
+  { t:'CONTININS',  s:'INSURANCE',    sh:4.803, ret:24.638, vol:5.129 },
+  { t:'UNIONINS',   s:'INSURANCE',    sh:1.144, ret:0.562,  vol:0.491 },
+  { t:'MARICO',     s:'PHARMA_CHEM',  sh:0.849, ret:0.215,  vol:0.254 },
+  { t:'KOHINOOR',   s:'PHARMA_CHEM',  sh:0.806, ret:0.331,  vol:0.410 },
+  { t:'RAHIMAFOOD', s:'FOOD_ALLIED',  sh:0.784, ret:0.430,  vol:0.549 },
+  { t:'BRACBANK',   s:'BANK',         sh:0.781, ret:0.229,  vol:0.293 },
+  { t:'MIDLANDBNK', s:'BANK',         sh:0.780, ret:0.449,  vol:0.576 },
+  { t:'NAVANAPHAR', s:'PHARMA_CHEM',  sh:0.767, ret:0.516,  vol:0.673 },
+  { t:'ANWARGALV',  s:'ENGINEERING',  sh:0.763, ret:0.356,  vol:0.466 },
+  { t:'ORIONINFU',  s:'PHARMA_CHEM',  sh:0.702, ret:0.348,  vol:0.496 },
+];
+
+const botSharpeData = [
+  { t:'NAHEEACP',   s:'ENGINEERING',  sh:-0.240, ret:-0.102, vol:0.425 },
+  { t:'FAREASTFIN', s:'NBFI',         sh:-0.256, ret:-0.138, vol:0.542 },
+  { t:'NRBCBANK',   s:'BANK',         sh:-0.260, ret:-0.105, vol:0.403 },
+  { t:'TITASGAS',   s:'POWER_ENERGY', sh:-0.265, ret:-0.074, vol:0.278 },
+  { t:'BPML',       s:'FOOD_ALLIED',  sh:-0.265, ret:-0.124, vol:0.467 },
+  { t:'PRIMEFIN',   s:'NBFI',         sh:-0.287, ret:-0.132, vol:0.459 },
+  { t:'NRBBANK',    s:'BANK',         sh:-0.291, ret:-0.141, vol:0.486 },
+  { t:'APOLOISPAT', s:'ENGINEERING',  sh:-0.296, ret:-0.133, vol:0.451 },
+  { t:'AAMRANET',   s:'TELCO_IT',     sh:-0.356, ret:-0.149, vol:0.419 },
+  { t:'UNIONBANK',  s:'BANK',         sh:-1.193, ret:-0.396, vol:0.332 },
+];
+
+const surgeData = [
+  { t:'PRAGATIINS',  v:4.94 }, { t:'RAHIMAFOOD',  v:4.72 },
+  { t:'UTTARABANK',  v:4.06 }, { t:'APEXSPINN',   v:3.83 },
+  { t:'ANWARGALV',   v:3.63 }, { t:'EBL',          v:3.46 },
+  { t:'DUTCHBANGL',  v:3.10 }, { t:'JAMUNABANK',   v:2.90 },
+  { t:'CITYBANK',    v:2.86 }, { t:'PUBALIBANK',   v:2.63 },
+  { t:'DHAKABANK',   v:2.42 }, { t:'BANKASIA',     v:2.06 },
+  { t:'SUNLIFEINS',  v:2.05 }, { t:'ACI',          v:1.94 },
+  { t:'INTECH',      v:1.92 },
+];
+
+const betaHighData = [
+  { t:'CONTININS',   b:11.713 }, { t:'UNIONINS',  b:1.559 },
+  { t:'NAVANAPHAR',  b:1.397 },  { t:'BAYLEASING',b:1.381 },
+  { t:'LANKABAFIN',  b:1.350 },  { t:'DESHBANDHU',b:1.334 },
+  { t:'SBACBANK',    b:1.306 },  { t:'RUPALIINS', b:1.295 },
+  { t:'MIDASFIN',    b:1.281 },  { t:'FARCHEM',   b:1.271 },
+];
+
+const betaLowData = [
+  { t:'GP',         b:0.509 }, { t:'KOHINOOR',    b:0.491 },
+  { t:'BANKASIA',   b:0.478 }, { t:'EBL',         b:0.474 },
+  { t:'PUBALIBANK', b:0.447 }, { t:'BATBC',        b:0.416 },
+  { t:'MPETROLEUM', b:0.405 }, { t:'RENATA',       b:0.319 },
+  { t:'MARICO',     b:0.266 }, { t:'RECKITTBEN',   b:0.173 },
+];
+
+const sectorVolData = [
+  { s:'INSURANCE',    v:135.7 }, { s:'TEXTILE',      v:49.4 },
+  { s:'NBFI',         v:43.8 },  { s:'TELCO_IT',     v:41.3 },
+  { s:'FOOD_ALLIED',  v:40.8 },  { s:'PHARMA_CHEM',  v:40.4 },
+  { s:'ENGINEERING',  v:39.1 },  { s:'CEMENT',       v:37.8 },
+  { s:'BANK',         v:30.9 },  { s:'POWER_ENERGY', v:26.7 },
+];
+
+const corrHighData = [
+  { a:'KARNAPHULI', b:'RUPALIINS',  r:0.653 },
+  { a:'ACTIVEFINE', b:'AFCAGRO',    r:0.609 },
+  { a:'AAMRANET',   b:'AAMRATECH',  r:0.574 },
+  { a:'BGIC',       b:'RUPALIINS',  r:0.572 },
+  { a:'AGNISYSL',   b:'BDCOM',      r:0.569 },
+];
+const corrLowData = [
+  { a:'SIBL',       b:'STYLECRAFT', r:-0.000 },
+  { a:'BDCOM',      b:'RECKITTBEN', r:-0.000 },
+  { a:'FARCHEM',    b:'MIDLANDBNK', r:0.000 },
+  { a:'PROVATIINS', b:'RECKITTBEN', r:-0.001 },
+  { a:'APOLOISPAT', b:'RECKITTBEN', r:-0.001 },
+];
+
+const drawdownLow = [
+  { t:'AMCL(PRAN)', v:-50.2 }, { t:'UTTARABANK', v:-49.6 },
+  { t:'TRUSTBANK',  v:-47.6 }, { t:'RECKITTBEN', v:-46.4 },
+  { t:'MARICO',     v:-46.2 }, { t:'EBL',         v:-46.2 },
+  { t:'BANKASIA',   v:-44.8 }, { t:'JAMUNABANK',  v:-41.9 },
+  { t:'KOHINOOR',   v:-39.9 }, { t:'IBNSINA',     v:-36.8 },
+];
+const drawdownHigh = [
+  { t:'CONTININS',  v:-99.7 }, { t:'FAMILYTEX',   v:-98.3 },
+  { t:'FAREASTFIN', v:-98.1 }, { t:'PRIMEFIN',    v:-97.7 },
+  { t:'APOLOISPAT', v:-95.2 }, { t:'BAYLEASING',  v:-93.7 },
+  { t:'MIDASFIN',   v:-90.9 }, { t:'AFCAGRO',     v:-90.7 },
+  { t:'UNIONCAP',   v:-90.6 }, { t:'HRTEX',       v:-90.1 },
+];
+
+const momData = {
+  '1M':  [{ t:'PRIMEFIN', r:36.4 }, { t:'APEXSPINN', r:27.0 }, { t:'FAREASTFIN', r:26.6 }, { t:'PUBALIBANK', r:23.3 }, { t:'PROVATIINS', r:17.8 }],
+  '3M':  [{ t:'APEXSPINN', r:48.6 }, { t:'ANWARGALV', r:47.8 }, { t:'PUBALIBANK', r:32.1 }, { t:'ACI', r:21.4 }, { t:'UNIONINS', r:19.9 }],
+  '6M':  [{ t:'APEXSPINN', r:55.4 }, { t:'INTECH', r:54.8 }, { t:'PRAGATIINS', r:52.5 }, { t:'PUBALIBANK', r:36.0 }, { t:'ANWARGALV', r:32.1 }],
+  '1Y':  [{ t:'APEXSPINN', r:120.1 }, { t:'RAHIMAFOOD', r:76.3 }, { t:'BRACBANK', r:58.0 }, { t:'INTECH', r:57.2 }, { t:'PRAGATIINS', r:56.9 }],
+};
+
+const rebalData = [
+  { date:'2025-09-28', buy:[['NBFI','+5.9%'],['TELCO_IT','+2.7%'],['POWER_ENERGY','+1.5%']], avoid:[['INSURANCE','-2.1%'],['ENGINEERING','-4.9%'],['FOOD_ALLIED','-5.3%']] },
+  { date:'2025-10-26', buy:[['INSURANCE','+8.7%'],['CEMENT','+5.9%'],['BANK','+3.3%']], avoid:[['ENGINEERING','-5.6%'],['TEXTILE','-7.2%'],['TELCO_IT','-7.6%']] },
+  { date:'2025-11-23', buy:[['ENGINEERING','+28.1%'],['BANK','+3.7%'],['POWER_ENERGY','+0.9%']], avoid:[['PHARMA_CHEM','-10.7%'],['INSURANCE','-11.0%'],['TELCO_IT','-14.5%']] },
+  { date:'2025-12-21', buy:[['TEXTILE','+2.9%'],['TELCO_IT','-6.8%'],['PHARMA_CHEM','-7.0%']], avoid:[['NBFI','-22.9%'],['CEMENT','-28.2%'],['POWER_ENERGY','-47.7%']] },
+  { date:'2026-01-18', buy:[['BANK','+3.7%'],['NBFI','+1.8%'],['ENGINEERING','+1.2%']], avoid:[['TEXTILE','-3.0%'],['CEMENT','-3.1%'],['TELCO_IT','-5.0%']] },
+];
+
+const leaderFreq = { TEXTILE:28, INSURANCE:21, NBFI:21, ENGINEERING:21, FOOD_ALLIED:18, BANK:15, PHARMA_CHEM:14, CEMENT:12, TELCO_IT:10, POWER_ENERGY:9 };
+
+const smartMoney = { BANK:545, PHARMA_CHEM:231, INSURANCE:204, NBFI:158, TELCO_IT:123, TEXTILE:122, FOOD_ALLIED:121, ENGINEERING:112, POWER_ENERGY:20, CEMENT:18 };
+
+const annualReturns = {
+  2014: { BANK:-0.0, NBFI:-9.7, INSURANCE:-20.9, PHARMA_CHEM:17.7, TEXTILE:9.5,  ENGINEERING:4.4,   FOOD_ALLIED:5.2,  CEMENT:-6.2, TELCO_IT:14.9, POWER_ENERGY:14.8 },
+  2015: { BANK:-2.6, NBFI:1.0,  INSURANCE:-27.8, PHARMA_CHEM:21.1, TEXTILE:-15.8,ENGINEERING:36.4,  FOOD_ALLIED:3.0,  CEMENT:1.3,  TELCO_IT:-23.4,POWER_ENERGY:-30.7},
+  2016: { BANK:15.9, NBFI:24.2, INSURANCE:14.3,  PHARMA_CHEM:-6.4, TEXTILE:-1.7, ENGINEERING:-8.8,  FOOD_ALLIED:36.8, CEMENT:2.5,  TELCO_IT:14.6, POWER_ENERGY:2.7  },
+  2017: { BANK:58.0, NBFI:40.0, INSURANCE:17.0,  PHARMA_CHEM:16.5, TEXTILE:25.8, ENGINEERING:9.2,   FOOD_ALLIED:11.2, CEMENT:-0.2, TELCO_IT:13.8, POWER_ENERGY:1.9  },
+  2018: { BANK:-22.8,NBFI:-21.3,INSURANCE:-6.6,  PHARMA_CHEM:17.3, TEXTILE:48.9, ENGINEERING:-5.7,  FOOD_ALLIED:-36.5,CEMENT:-2.6, TELCO_IT:30.0, POWER_ENERGY:-6.9 },
+  2019: { BANK:-11.5,NBFI:-30.7,INSURANCE:0.2,   PHARMA_CHEM:-10.9,TEXTILE:22.9, ENGINEERING:-25.0, FOOD_ALLIED:-25.5,CEMENT:-39.1,TELCO_IT:-46.2,POWER_ENERGY:-12.3},
+  2020: { BANK:8.5,  NBFI:33.4, INSURANCE:97.2,  PHARMA_CHEM:29.0, TEXTILE:-18.5,ENGINEERING:44.6,  FOOD_ALLIED:80.0, CEMENT:18.8, TELCO_IT:61.3, POWER_ENERGY:9.7  },
+  2021: { BANK:26.3, NBFI:17.7, INSURANCE:36.5,  PHARMA_CHEM:27.3, TEXTILE:-0.2, ENGINEERING:106.0, FOOD_ALLIED:48.1, CEMENT:27.6, TELCO_IT:-10.6,POWER_ENERGY:3.2  },
+  2022: { BANK:-15.0,NBFI:4.6,  INSURANCE:-25.5, PHARMA_CHEM:17.9, TEXTILE:40.3, ENGINEERING:17.9,  FOOD_ALLIED:-18.3,CEMENT:-18.0,TELCO_IT:33.7, POWER_ENERGY:3.7  },
+  2023: { BANK:-2.5, NBFI:-42.6,INSURANCE:9.0,   PHARMA_CHEM:-2.0, TEXTILE:-26.2,ENGINEERING:-8.9,  FOOD_ALLIED:10.9, CEMENT:5.4,  TELCO_IT:-5.3, POWER_ENERGY:0.0  },
+  2024: { BANK:-0.4, NBFI:-19.4,INSURANCE:-29.5, PHARMA_CHEM:-6.5, TEXTILE:-35.2,ENGINEERING:-62.6, FOOD_ALLIED:-45.5,CEMENT:-32.5,TELCO_IT:-19.2,POWER_ENERGY:-19.4},
+  2025: { BANK:0.9,  NBFI:-12.1,INSURANCE:-1.2,  PHARMA_CHEM:-7.4, TEXTILE:7.7,  ENGINEERING:10.0,  FOOD_ALLIED:11.1, CEMENT:-12.2,TELCO_IT:-2.2, POWER_ENERGY:-6.9 },
+  2026: { BANK:6.2,  NBFI:7.1,  INSURANCE:8.2,   PHARMA_CHEM:5.0,  TEXTILE:-1.9, ENGINEERING:6.6,   FOOD_ALLIED:-3.0, CEMENT:2.8,  TELCO_IT:1.0,  POWER_ENERGY:3.4  },
+};
+
+/* ═══════════════ SIGNAL COLORS ═══════════════ */
+function signalColor(s) {
+  if (s === 'BUY')   return 'var(--buy)';
+  if (s === 'WATCH') return 'var(--watch)';
+  return 'var(--avoid)';
+}
+function signalBadge(s) {
+  if (s === 'BUY')   return '<span class="badge badge-buy">BUY</span>';
+  if (s === 'WATCH') return '<span class="badge badge-watch">WATCH</span>';
+  return '<span class="badge badge-avoid">AVOID</span>';
+}
+
+/* ═══════════════ RENDER FUNCTIONS ═══════════════ */
+
+// Rotation Signal
+function renderRotSignal() {
+  const el = document.getElementById('rotSignal');
+  el.innerHTML = rotSignalData.map(d => `
+    <div class="rotation-row">
+      <div class="rot-sector">${d.sector}</div>
+      <div class="rot-bar-wrap"><div class="rot-bar" style="width:${d.score*100}%;background:${signalColor(d.signal)};opacity:0.85;"></div></div>
+      <div class="rot-score">${d.score.toFixed(2)}</div>
+      ${signalBadge(d.signal)}
+    </div>`).join('');
+}
+
+// Volume Surge
+function renderSurge() {
+  const max = Math.max(...surgeData.map(d=>d.v));
+  document.getElementById('surgeBars').innerHTML = surgeData.map(d => `
+    <div class="surge-item">
+      <div class="surge-ticker">${d.t}</div>
+      <div class="surge-bar-wrap"><div class="surge-bar" style="width:${(d.v/max*100).toFixed(1)}%;"></div></div>
+      <div class="surge-val">${d.v.toFixed(2)}×</div>
+    </div>`).join('');
+}
+
+// Beta bars
+function renderBeta() {
+  const maxH = betaHighData[0].b;
+  const maxL = betaLowData[0].b;
+  document.getElementById('betaBars').innerHTML = `
+    <div class="beta-section">
+      <div class="beta-label">HIGH BETA — Aggressive</div>
+      ${betaHighData.map(d=>`
+        <div class="beta-item">
+          <div class="beta-name">${d.t}</div>
+          <div class="beta-bar-wrap"><div class="beta-bar-h" style="width:${(d.b/maxH*100).toFixed(1)}%;"></div></div>
+          <div class="beta-val high">${d.b.toFixed(3)}</div>
+        </div>`).join('')}
+    </div>
+    <div class="beta-section" style="margin-top:16px;">
+      <div class="beta-label">LOW BETA — Defensive</div>
+      ${betaLowData.map(d=>`
+        <div class="beta-item">
+          <div class="beta-name">${d.t}</div>
+          <div class="beta-bar-wrap"><div class="beta-bar-l" style="width:${(d.b/maxL*100).toFixed(1)}%;"></div></div>
+          <div class="beta-val low">${d.b.toFixed(3)}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// Sector Vol Bars
+function renderSectorVol() {
+  const max = sectorVolData[0].v;
+  const colors = ['#ff6b6b','#ff9f43','#ffd32a','#ffdd59','#4fffb0','#00c8ff','#b388ff','#7efff5','#74b9ff','#a29bfe'];
+  document.getElementById('sectorVolBars').innerHTML = sectorVolData.map((d,i)=>`
+    <div class="sector-vol-item">
+      <div class="sv-name">${d.s}</div>
+      <div class="sv-bar-wrap"><div class="sv-bar" style="width:${(d.v/max*100).toFixed(1)}%;background:${colors[i]};opacity:0.8;"></div></div>
+      <div class="sv-val">${d.v.toFixed(1)}%</div>
+    </div>`).join('');
+}
+
+// Correlation
+function renderCorr() {
+  document.getElementById('corrHigh').innerHTML = corrHighData.map(d=>`
+    <div class="corr-item">
+      <div class="corr-pair">${d.a} <span>↔</span> ${d.b}</div>
+      <div class="corr-val hi">r = +${d.r.toFixed(3)}</div>
+    </div>`).join('');
+  document.getElementById('corrLow').innerHTML = corrLowData.map(d=>`
+    <div class="corr-item">
+      <div class="corr-pair">${d.a} <span>↔</span> ${d.b}</div>
+      <div class="corr-val lo">r ≈ ${d.r.toFixed(3)}</div>
+    </div>`).join('');
+}
+
+// Sharpe tables
+function renderSharpeTables() {
+  document.getElementById('topSharpe').innerHTML = topSharpeData.map((d,i)=>`
+    <div class="stk-row">
+      <div class="stk-rank">${i+1}</div>
+      <div class="stk-name">${d.t}</div>
+      <div class="stk-sector">${d.s}</div>
+      <div class="stk-val pos">${d.sh.toFixed(3)}</div>
+      <div class="stk-val pos" style="min-width:58px">${d.ret.toFixed(1)}%</div>
+    </div>`).join('');
+  document.getElementById('botSharpe').innerHTML = botSharpeData.map((d,i)=>`
+    <div class="stk-row">
+      <div class="stk-rank">${i+1}</div>
+      <div class="stk-name">${d.t}</div>
+      <div class="stk-sector">${d.s}</div>
+      <div class="stk-val neg">${d.sh.toFixed(3)}</div>
+      <div class="stk-val neg" style="min-width:58px">${d.ret.toFixed(1)}%</div>
+    </div>`).join('');
+}
+
+// Drawdown
+function renderDrawdown() {
+  document.getElementById('drawdownLow').innerHTML = drawdownLow.map((d,i)=>`
+    <div class="stk-row">
+      <div class="stk-rank">${i+1}</div>
+      <div class="stk-name">${d.t}</div>
+      <div style="flex:1"></div>
+      <div class="stk-val pos">${d.v.toFixed(1)}%</div>
+    </div>`).join('');
+  document.getElementById('drawdownHigh').innerHTML = drawdownHigh.map((d,i)=>`
+    <div class="stk-row">
+      <div class="stk-rank">${i+1}</div>
+      <div class="stk-name">${d.t}</div>
+      <div style="flex:1"></div>
+      <div class="stk-val neg">${d.v.toFixed(1)}%</div>
+    </div>`).join('');
+}
+
+// Momentum Grid
+function renderMomGrid() {
+  const horizons = ['1M','3M','6M','1Y'];
+  const labels = { '1M':'1 Month','3M':'3 Months','6M':'6 Months','1Y':'1 Year' };
+  document.getElementById('momGrid').innerHTML = horizons.map(h=>`
+    <div class="mom-col">
+      <div class="mom-col-head">${labels[h]}</div>
+      ${momData[h].map(d=>`
+        <div class="mom-item">
+          <div class="mom-ticker">${d.t}</div>
+          <div class="mom-ret">+${d.r}%</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+// Rebalancing signals
+function renderRebalSignals() {
+  document.getElementById('rebalSignals').innerHTML = rebalData.map(d=>`
+    <div style="padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:8px;letter-spacing:0.08em;">${d.date}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div>
+          ${d.buy.map(b=>`<span style="font-family:var(--font-mono);font-size:11px;margin-right:10px;"><span class="badge badge-buy">BUY</span> <span style="color:var(--text)">${b[0]}</span> <span style="color:var(--buy)">${b[1]}</span></span>`).join('')}
+        </div>
+        <div>
+          ${d.avoid.map(b=>`<span style="font-family:var(--font-mono);font-size:11px;margin-right:10px;"><span class="badge badge-avoid">AVOID</span> <span style="color:var(--text)">${b[0]}</span> <span style="color:var(--avoid)">${b[1]}</span></span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// Heatmap
+function renderHeatmap() {
+  const heatSectors = ['BANK','NBFI','INSURANCE','PHARMA_CHEM','TEXTILE','ENGINEERING','FOOD_ALLIED','CEMENT','TELCO_IT','POWER_ENERGY'];
+  const years = Object.keys(annualReturns).map(Number);
+
+  function heatColor(v) {
+    if (v === null || v === undefined) return 'background:#1f242f;color:var(--text3)';
+    if (v >= 80)  return 'background:#004d26;color:#4fffb0';
+    if (v >= 40)  return 'background:#005c1a;color:#6fff99';
+    if (v >= 20)  return 'background:#00401a;color:#80ffaa';
+    if (v >= 10)  return 'background:#003311;color:#99ffcc';
+    if (v >= 0)   return 'background:#1a2e1a;color:#a0d0a0';
+    if (v >= -10) return 'background:#2e1a1a;color:#d0a0a0';
+    if (v >= -20) return 'background:#3d1111;color:#ffb3b3';
+    if (v >= -40) return 'background:#5c0000;color:#ff8080';
+    return 'background:#7f0000;color:#ffcccc';
+  }
+
+  const tbl = document.getElementById('heatTable');
+  let html = '<thead><tr><th style="text-align:left;padding-left:0;">Year</th>';
+  heatSectors.forEach(s => { html += `<th>${s.replace('_','\u200B_')}</th>`; });
+  html += '</tr></thead><tbody>';
+  years.forEach(yr => {
+    html += `<tr><td class="year-col">${yr}</td>`;
+    heatSectors.forEach(s => {
+      const v = annualReturns[yr][s];
+      const fmt = v !== undefined ? (v >= 0 ? `+${v.toFixed(1)}` : `${v.toFixed(1)}`) : '—';
+      html += `<td style="${heatColor(v)}">${fmt}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+
+/* ═══════════════ CHARTS ═══════════════ */
+
+let chartsCreated = false;
+function initCharts() {
+  if (chartsCreated) return;
+  chartsCreated = true;
+
+  const textColor = '#8a8f9e';
+  const gridColor = 'rgba(255,255,255,0.05)';
+
+  // ── SECTOR DIST DOUGHNUT
+  new Chart(document.getElementById('sectorDistChart'), {
+    type: 'doughnut',
+    data: {
+      labels: sectors,
+      datasets: [{ data: sectorCount,
+        backgroundColor: ['#4fffb0','#00c8ff','#ffc94a','#ff6b6b','#b388ff','#74b9ff','#fd79a8','#a29bfe','#55efc4','#fdcb6e'],
+        borderColor: '#111318', borderWidth: 2, hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} companies` } }
+      }
+    }
+  });
+
+  // ── RISK / RETURN SCATTER
+  const rrData = [
+    ...topSharpeData.map(d => ({ x: d.vol*100, y: d.ret, label: d.t, type: 'top' })),
+    ...botSharpeData.map(d => ({ x: d.vol*100, y: d.ret*-1 < 0 ? d.ret : d.ret, label: d.t, type: 'bot' })),
+  ];
+  new Chart(document.getElementById('riskReturnChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Top Sharpe', data: topSharpeData.map(d=>({ x:d.vol*100, y:d.ret, label:d.t })),
+          backgroundColor: '#4fffb0', pointRadius: 6, pointHoverRadius: 8 },
+        { label: 'Bottom Sharpe', data: botSharpeData.map(d=>({ x:d.vol*100, y:d.ret, label:d.t })),
+          backgroundColor: '#ff6b6b', pointRadius: 6, pointHoverRadius: 8, pointStyle: 'triangle' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.raw.label || ''}: Ret ${ctx.raw.y?.toFixed(2)}  Vol ${ctx.raw.x?.toFixed(2)}` } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Annualised Volatility (%)', color: textColor, font:{ size:11 } }, ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { title: { display: true, text: 'Annualised Return (%)', color: textColor, font:{ size:11 } }, ticks: { color: textColor }, grid: { color: gridColor } },
+      }
+    }
+  });
+
+  // ── LEADER FREQ BAR
+  const lfKeys = Object.keys(leaderFreq);
+  const lfVals = Object.values(leaderFreq);
+  new Chart(document.getElementById('leaderFreqChart'), {
+    type: 'bar',
+    data: {
+      labels: lfKeys,
+      datasets: [{ label: 'Periods as Leader', data: lfVals,
+        backgroundColor: ['#4fffb0','#00c8ff','#ffc94a','#ff6b6b','#b388ff','#74b9ff','#fd79a8','#a29bfe','#55efc4','#fdcb6e'],
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} periods` } } },
+      scales: {
+        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor, font:{ size:10 } }, grid: { color: 'transparent' } }
+      }
+    }
+  });
+
+  // ── SMART MONEY BAR
+  const smKeys = Object.keys(smartMoney);
+  const smVals = Object.values(smartMoney);
+  new Chart(document.getElementById('smartMoneyChart'), {
+    type: 'bar',
+    data: {
+      labels: smKeys,
+      datasets: [{ label: 'Vol-Wtd Return (M)', data: smVals,
+        backgroundColor: '#00c8ff', borderRadius: 4, borderSkipped: false, opacity: 0.8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}M BDT` } } },
+      scales: {
+        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor, font:{ size:10 } }, grid: { color: 'transparent' } }
+      }
+    }
+  });
+
+  // ── 1Y RETURN CHART
+  const m1y = momData['1Y'];
+  new Chart(document.getElementById('oneYearChart'), {
+    type: 'bar',
+    data: {
+      labels: m1y.map(d=>d.t),
+      datasets: [{ label: '1Y Return (%)', data: m1y.map(d=>d.r),
+        backgroundColor: ['#4fffb0','#00c8ff','#ffc94a','#b388ff','#fd79a8'],
+        borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` +${ctx.parsed.y}%` } } },
+      scales: {
+        x: { ticks: { color: textColor, font:{ size:12, weight:'500' } }, grid: { color: 'transparent' } },
+        y: { ticks: { color: textColor, callback: v => v + '%' }, grid: { color: gridColor } }
+      }
+    }
+  });
+
+  // ── CUMULATIVE RETURN LINE
+  const heatSectors2 = ['BANK','NBFI','INSURANCE','PHARMA_CHEM','TEXTILE','ENGINEERING'];
+  const years2 = Object.keys(annualReturns).map(Number);
+  const colors2 = ['#4fffb0','#00c8ff','#ffc94a','#ff6b6b','#b388ff','#fd79a8'];
+  const cumDatasets = heatSectors2.map((s, i) => {
+    let cum = 0;
+    const pts = years2.map(yr => {
+      cum += (annualReturns[yr][s] || 0);
+      return { x: yr, y: parseFloat(cum.toFixed(1)) };
+    });
+    return { label: s, data: pts, borderColor: colors2[i], backgroundColor: 'transparent', borderWidth: 2, pointRadius: 2, tension: 0.3 };
+  });
+  new Chart(document.getElementById('cumRetChart'), {
+    type: 'line',
+    data: { datasets: cumDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: textColor, boxWidth: 12, font:{ size:10 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` } }
+      },
+      scales: {
+        x: { type: 'linear', min: 2014, ticks: { color: textColor, stepSize: 1, callback: v => v }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor, callback: v => v + '%' }, grid: { color: gridColor } }
+      }
+    }
+  });
+}
+
+/* ═══════════════ TABS ═══════════════ */
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById('panel-' + btn.dataset.panel);
+  if (panel) panel.classList.add('active');
+  // init charts lazily
+  setTimeout(initCharts, 50);
+});
+
+/* ═══════════════ INIT ═══════════════ */
+renderRotSignal();
+renderSurge();
+renderBeta();
+renderSectorVol();
+renderCorr();
+renderSharpeTables();
+renderDrawdown();
+renderMomGrid();
+renderRebalSignals();
+renderHeatmap();
+initCharts();
+</script>
+</body>
+</html>
